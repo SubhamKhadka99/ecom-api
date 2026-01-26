@@ -1,40 +1,59 @@
 import express, { Request, Response } from "express";
-
+import User from "../models/user.model";
 // get all users
-export const getAll = (req: Request, res: Response) => {
-  const id = req.params.id;
-  res.status(200).json({
-    message: `All users fetched`,
-  });
+export const getAll = async (req: Request, res: Response) => {
+  try {
+    // db query -> user collection
+    const users = await User.find({});
+    //! Success response
+    res.status(201).json({
+      message: "Account created",
+      code: "SUCCESS",
+      status: "success",
+      data: users,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      message: error?.message || "Internal server error",
+      code: "INTEENAL_SERVER_ERR",
+      status: "error",
+      data: null,
+    });
+  }
 };
 
-//  get users by id
-export const getById = (req: Request, res: Response) => {
-  const id = req.params.id;
-  res.status(200).json({
-    message: `User ${id} fetched`,
-  });
+//! get by id
+export const getById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const user = await User.findOne({ _id: id });
+
+    if (!user) {
+      res.status(404).json({
+        message: "User not found",
+        code: "NOT_FOUND_ERR",
+        status: "fail",
+        data: null,
+      });
+    }
+
+    res.status(201).json({
+      message: "Account created",
+      code: "SUCCESS",
+      status: "success",
+      data: user,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      message: error?.message || "Internal server error",
+      code: "INTEENAL_SERVER_ERR",
+      status: "error",
+      data: null,
+    });
+  }
 };
 
-// create users
-export const createUsers = (req: Request, res: Response) => {
-  res.json({
-    message: "User created",
-  });
-};
+//!update
 
-// Update users
-export const updateUsers = (req: Request, res: Response) => {
-  const id = req.params.id;
-  res.json({
-    message: `User ${id} updated`,
-  });
-};
-
-// delete users
-export const deleteUsers = (req: Request, res: Response) => {
-  const id = req.params.id;
-  res.json({
-    message: `User ${id} deleted`,
-  });
-};
+//! delete

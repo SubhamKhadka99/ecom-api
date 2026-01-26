@@ -1,11 +1,12 @@
 //! routing for auth
 import express from 'express';
-import {register,login} from '../controllers/auth.controller'
+import {login, register} from '../controllers/auth.controller'
 
 const router = express.Router()
 
 //* register 
-router.post("/",register);
+router.post("/register",register);
 
 //* Login
-router.get("/",login)
+router.post("/login",login)
+export default router
