@@ -9,7 +9,10 @@ import { ENV_CONFIG } from "./config/env.config";
 //! importing routes
 import authRoutes from "./routes/auth.routes";
 import userRoutes from "./routes/user.routes";
-import { error_handler } from "./middlewares/error_handler.middleware";
+import AppError, {
+  error_handler,
+} from "./middlewares/error_handler.middleware";
+import { ERROR_CODES } from "./types/enum.types";
 
 const app = express();
 const PORT = ENV_CONFIG.port || 8000;
@@ -34,11 +37,7 @@ app.get("/", (req: Request, res: Response) => {
 //! path not found error
 app.use((req: Request, res: Response, next: NextFunction) => {
   const message = `can not  ${req.method} on ${req.url}`;
-  const error: any = new Error(message);
-  error.statusCode = 400;
-  error.status = "error";
-  error.code = "NOT_FOUND_ERROR";
-  console.log(error);
+  const error = new AppError(message, ERROR_CODES.NOT_FOUND_ERR, 404);
   next(error);
 });
 

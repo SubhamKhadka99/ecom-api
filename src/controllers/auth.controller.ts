@@ -2,6 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import User from "../models/user.model";
 import { compareHash, hashText } from "../utils/bcrypt.utils";
 import { hash } from "bcryptjs";
+import AppError from "../middlewares/error_handler.middleware";
+import { ERROR_CODES } from "../types/enum.types";
 
 //! register
 export const register = async (
@@ -12,32 +14,28 @@ export const register = async (
   try {
     const { first_name, last_name, email, password, phone } = req.body;
     if (!first_name) {
-      const error: any = new Error("first_name is required");
-      error.statusCode = 400;
-      error.status = "fail";
-      error.code = "VALIDATION_ERR";
-      throw error;
+      throw new AppError(
+        "first_name is required",
+        ERROR_CODES.VALIDATION_ERR,
+        400,
+      );
     }
     if (!last_name) {
-      const error: any = new Error("last_name is required");
-      error.statusCode = 400;
-      error.status = "fail";
-      error.code = "VALIDATION_ERR";
-      throw error;
+      throw new AppError(
+        "last_name is required",
+        ERROR_CODES.VALIDATION_ERR,
+        400,
+      );
     }
     if (!email) {
-      const error: any = new Error("email is required");
-      error.statusCode = 400;
-      error.status = "fail";
-      error.code = "VALIDATION_ERR";
-      throw error;
+      throw new AppError("email is required", ERROR_CODES.VALIDATION_ERR, 400);
     }
     if (!password) {
-      const error: any = new Error("password is required");
-      error.statusCode = 400;
-      error.status = "fail";
-      error.code = "VALIDATION_ERR";
-      throw error;
+      throw new AppError(
+        "password is required",
+        ERROR_CODES.VALIDATION_ERR,
+        400,
+      );
     }
 
     // create user
@@ -49,10 +47,10 @@ export const register = async (
     user.password = hash_password;
     // profile image
     // otp
-    //! save user
+    //? save user
     await user.save();
 
-    //! success response
+    //? success response
     res.status(201).json({
       message: "Account created",
       code: "SUCCESS",
@@ -65,52 +63,43 @@ export const register = async (
 };
 
 //! login
-export const login = async (req: Request, res: Response) => {
+export const login = async (req: Request, res: Response , next :NextFunction) => {
   try {
     const { email, password } = req.body;
     if (!email) {
-      res.status(400).json({
-        message: "email is required",
-        code: "VALIDATION_ERR",
-        status: "error",
-        data: null,
-      });
+      throw new AppError("email is required", ERROR_CODES.VALIDATION_ERR, 400);
     }
     if (!password) {
-      res.status(400).json({
-        message: "password is required",
-        code: "VALIDATION_ERR",
-        status: "error",
-        data: null,
-      });
+      throw new AppError(
+        "password is required",
+        ERROR_CODES.VALIDATION_ERR,
+        400,
+      );
     }
 
     // get user by email
 
     const user = await User.findOne({ email }).select("+password");
     if (!user) {
-      res.status(404).json({
-        message: "email or password doesn't match",
-        code: "NOT_FOUND_ERR",
-        status: "fail",
-        data: null,
-      });
-      return;
+      throw new AppError(
+        "email or password doesn't match",
+        ERROR_CODES.AUTH_ERR,
+        400,
+      );
     }
     console.log(user);
 
     //? compare password
     const is_pass_match = await compareHash(password, user.password);
     if (!is_pass_match) {
-      res.status(404).json({
-        message: "email or password does not match",
-        code: "NOT_FOUND_ERR",
-        status: "fail",
-        data: null,
-      });
-      return;
+      throw new AppError(
+        "email or password doesn't match",
+        ERROR_CODES.AUTH_ERR,
+        400,
+      );
     }
-    //! success response
+
+    //? success response
     res.status(201).json({
       message: "Login Successful!",
       code: "SUCCESS",
@@ -118,11 +107,6 @@ export const login = async (req: Request, res: Response) => {
       data: user,
     });
   } catch (error: any) {
-    res.status(500).json({
-      message: error?.message || "Internal server error",
-      code: "INTEENAL_SERVER_ERR",
-      status: "error",
-      data: null,
-    });
+    next(error);
   }
 };

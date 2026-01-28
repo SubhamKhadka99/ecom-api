@@ -1,5 +1,7 @@
-import { json, Request, Response } from "express";
+import { json, NextFunction, Request, Response } from "express";
 import User from "../models/user.model";
+import AppError from "../middlewares/error_handler.middleware";
+import { ERROR_CODES } from "../types/enum.types";
 
 export const getAll = async (req: Request, res: Response) => {
   try {
@@ -13,29 +15,27 @@ export const getAll = async (req: Request, res: Response) => {
       data: users,
     });
   } catch (error: any) {
-    res.status(500).json({
-      message: error?.message || "Internal server error",
-      code: "INTERNAL_SERVER_ERR",
-      status: "error",
-      data: null,
-    });
+    throw new AppError(
+      "INTERNAL_SERVER_ERR",
+      ERROR_CODES.INTERNAL_SERVER_ERR,
+      400,
+    );
   }
 };
 
 //! get by id
-export const getById = async (req: Request, res: Response) => {
+export const getById = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { id } = req.params;
 
     const user = await User.findOne({ _id: id });
 
     if (!user) {
-      res.status(404).json({
-        message: "User not found",
-        code: "NOT_FOUND_ERR",
-        status: "fail",
-        data: null,
-      });
+      throw new AppError("User not found", ERROR_CODES.NOT_FOUND_ERR, 400);
     }
 
     res.status(201).json({
@@ -45,29 +45,27 @@ export const getById = async (req: Request, res: Response) => {
       data: user,
     });
   } catch (error: any) {
-    res.status(500).json({
-      message: error?.message || "Internal server error",
-      code: "INTERNAL_SERVER_ERR",
-      status: "error",
-      data: null,
-    });
+    next(error);
   }
 };
 
 //!update
-export const update_user = async (req: Request, res: Response) => {
+export const update_user = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { id } = req.params;
 
-    const updatedUser = await User.findByIdAndUpdate(id, req.body);
+    const updatedUser = await User.findByIdAndUpdate(id, req.body); // firstname lastname phonenumber
 
     if (!updatedUser) {
-      return res.status(404).json({
-        message: "User not found",
-        code: "NOT_FOUND_ERR",
-        status: "fail",
-        data: null,
-      });
+      throw new AppError(
+        "INTERNAL_SERVER_ERR",
+        ERROR_CODES.INTERNAL_SERVER_ERR,
+        400,
+      );
     }
 
     res.status(200).json({
@@ -77,29 +75,23 @@ export const update_user = async (req: Request, res: Response) => {
       data: updatedUser,
     });
   } catch (error: any) {
-    res.status(500).json({
-      message: error?.message || "Internal server error",
-      code: "INTERNAL_SERVER_ERR",
-      status: "error",
-      data: null,
-    });
+    next(error);
   }
 };
 
 //!delete
-export const delete_user = async (req: Request, res: Response) => {
+export const delete_user = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { id } = req.params;
 
     const deletedUser = await User.findByIdAndDelete(id);
 
     if (!deletedUser) {
-      return res.status(404).json({
-        message: "User not found",
-        code: "NOT_FOUND_ERR",
-        status: "fail",
-        data: null,
-      });
+      throw new AppError("User not found", ERROR_CODES.NOT_FOUND_ERR, 400);
     }
 
     res.status(200).json({
@@ -109,11 +101,6 @@ export const delete_user = async (req: Request, res: Response) => {
       data: deletedUser,
     });
   } catch (error: any) {
-    res.status(500).json({
-      message: error?.message || "Internal server error",
-      code: "INTERNAL_SERVER_ERR",
-      status: "error",
-      data: null,
-    });
+    next(error);
   }
 };
