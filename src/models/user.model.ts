@@ -35,27 +35,34 @@ const user_schema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    otp_hash: {
+      type: String,
+      select: false,
+    },
+    otp_expiry: {
+      type: Date,
+      select: false,
+    },
     phone: {
       type: String,
     },
-    
-    //image upload => server => cloud
-    // cloudinary => aws , azure 
-    //{path:url,public_id:id,}
-    
-    profile_image:{
- type:{
-      path:{
-        type:String,
-        required:[true,'profile_image_url is required'],
-      },
-      public_id:{
-        type:String,
-        required:[true,"public_id is required"]
-      }
 
-     }
-    }
+    //image upload => server => cloud
+    // cloudinary => aws , azure
+    //{path:url,public_id:id,}
+
+    profile_image: {
+      type: {
+        path: {
+          type: String,
+          required: [true, "profile_image_url is required"],
+        },
+        public_id: {
+          type: String,
+          required: [true, "public_id is required"],
+        },
+      },
+    },
   },
   { timestamps: true },
 );
@@ -63,4 +70,3 @@ const user_schema = new mongoose.Schema(
 //! user model
 const User = mongoose.model("user", user_schema);
 export default User;
-  

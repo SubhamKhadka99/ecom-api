@@ -5,6 +5,7 @@ import { hash } from "bcryptjs";
 import AppError from "../middlewares/error_handler.middleware";
 import { ERROR_CODES } from "../types/enum.types";
 import { upload } from "../utils/cloudinary.utils";
+import { createOtp } from "../utils/otp.utils";
 
 
 const dir ="/profile_images"
@@ -62,8 +63,17 @@ export const register = async (
     }
     }
     // otp
+    const otp = createOtp()
+
+    console.log(otp)
+    const otp_hash = await hashText(otp);
+    user.otp_hash = otp_hash
     //? save user
     await user.save();
+
+    const otp_expiry = new Date(Date.now()+ 10*60*1000)
+    user.otp_hash = otp_hash
+    user.otp_expiry = otp_expiry
 
     //? success response
     res.status(201).json({
@@ -125,3 +135,31 @@ export const login = async (req: Request, res: Response , next :NextFunction) =>
     next(error);
   }
 };
+
+
+//verify otp
+
+export const verifyOtp = async (req:Request,res:Response,next:NextFunction)=>{
+
+  try {
+
+    // otp , email <= req.body
+    // find user by email
+    // compare otp
+    // opt => doest match => error
+    // check opt expiry
+    // if expired => error
+    // update user
+    // user.opt.hash = undefined
+    // user.otp_expiry = undefined
+    // user.is_verified = true
+    // await user.save
+    // success response
+    
+  } catch (error) {
+    next(error)
+  }
+
+}
+
+// resend otp

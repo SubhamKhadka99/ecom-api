@@ -3,7 +3,7 @@
 import AppError from "../middlewares/error_handler.middleware";
 import { ERROR_CODES } from "../types/enum.types";
 import cloudinary from "../config/cloudinary.config";
-import fs from 'fs'
+import fs from "fs";
 
 export const upload = async (file: Express.Multer.File, dir = "/") => {
   try {
@@ -17,8 +17,8 @@ export const upload = async (file: Express.Multer.File, dir = "/") => {
       },
     );
 
-    if(fs.existsSync(file.path)){
-        fs.unlinkSync(file.path)
+    if (fs.existsSync(file.path)) {
+      fs.unlinkSync(file.path);
     }
 
     return {
@@ -35,4 +35,18 @@ export const upload = async (file: Express.Multer.File, dir = "/") => {
   }
 };
 
-
+//! delete file from cloud
+export const deleteFile = async (public_id: string) => {
+  try {
+    await cloudinary.uploader.destroy(public_id);
+    return true;
+    
+  } catch (error) {
+    console.log(error);
+    throw new AppError(
+      "Something went wrong",
+      ERROR_CODES.INTERNAL_SERVER_ERR,
+      500,
+    );
+  }
+};
