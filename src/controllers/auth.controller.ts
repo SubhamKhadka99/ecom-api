@@ -4,7 +4,10 @@ import { compareHash, hashText } from "../utils/bcrypt.utils";
 import { hash } from "bcryptjs";
 import AppError from "../middlewares/error_handler.middleware";
 import { ERROR_CODES } from "../types/enum.types";
+import { upload } from "../utils/cloudinary.utils";
 
+
+const dir ="/profile_images"
 //! register
 export const register = async (
   req: Request,
@@ -47,13 +50,17 @@ export const register = async (
     // password hash
     const hash_password = await hashText(password);
     user.password = hash_password;
+
     // profile image
-   if(file){
-     user.profile_image={
-      path:file?.path as string,
-      public_id:file?.filename as string
+    if (file){
+    //upload image to cloudinary
+    const {path,public_id} = await upload(file,dir);
+    //* save image
+    user.profile_image={
+      path: path ,
+      public_id : public_id
     }
-   }
+    }
     // otp
     //? save user
     await user.save();

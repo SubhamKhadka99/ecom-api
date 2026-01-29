@@ -22,6 +22,7 @@ connectDB();
 
 //! using middleware
 app.use(express.json({ limit: "10mb" })); //parse req body json data
+app.use("/uploads",express.static("uploads/"))
 
 // ! using routes
 app.use("/api/auth", authRoutes);

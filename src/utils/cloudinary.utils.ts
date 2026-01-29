@@ -1,0 +1,38 @@
+// upload to cloudinary
+
+import AppError from "../middlewares/error_handler.middleware";
+import { ERROR_CODES } from "../types/enum.types";
+import cloudinary from "../config/cloudinary.config";
+import fs from 'fs'
+
+export const upload = async (file: Express.Multer.File, dir = "/") => {
+  try {
+    const upload_dir = "ecom" + dir;
+
+    const { public_id, secure_url } = await cloudinary.uploader.upload(
+      file.path,
+      {
+        folder: upload_dir,
+        unique_filename: true,
+      },
+    );
+
+    if(fs.existsSync(file.path)){
+        fs.unlinkSync(file.path)
+    }
+
+    return {
+      public_id,
+      path: secure_url,
+    };
+  } catch (error) {
+    console.log(error);
+    throw new AppError(
+      "File upload error",
+      ERROR_CODES.INTERNAL_SERVER_ERR,
+      500,
+    );
+  }
+};
+
+
