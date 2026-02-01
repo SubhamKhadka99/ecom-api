@@ -7,8 +7,7 @@ import { ERROR_CODES } from "../types/enum.types";
 import { upload } from "../utils/cloudinary.utils";
 import { createOtp } from "../utils/otp.utils";
 
-
-const dir ="/profile_images"
+const dir = "/profile_images";
 //! register
 export const register = async (
   req: Request,
@@ -18,7 +17,7 @@ export const register = async (
   try {
     const { first_name, last_name, email, password, phone } = req.body;
     const file = req.file;
-    console.log(file)
+    console.log(file);
     if (!first_name) {
       throw new AppError(
         "first_name is required",
@@ -53,27 +52,27 @@ export const register = async (
     user.password = hash_password;
 
     // profile image
-    if (file){
-    //upload image to cloudinary
-    const {path,public_id} = await upload(file,dir);
-    //* save image
-    user.profile_image={
-      path: path ,
-      public_id : public_id
-    }
+    if (file) {
+      //upload image to cloudinary
+      const { path, public_id } = await upload(file, dir);
+      //* save image
+      user.profile_image = {
+        path: path,
+        public_id: public_id,
+      };
     }
     // otp
-    const otp = createOtp()
+    const otp = createOtp();
 
-    console.log(otp)
+    console.log(otp);
     const otp_hash = await hashText(otp);
-    user.otp_hash = otp_hash
+    user.otp_hash = otp_hash;
     //? save user
     await user.save();
 
-    const otp_expiry = new Date(Date.now()+ 10*60*1000)
-    user.otp_hash = otp_hash
-    user.otp_expiry = otp_expiry
+    const otp_expiry = new Date(Date.now() + 10 * 60 * 1000);
+    user.otp_hash = otp_hash;
+    user.otp_expiry = otp_expiry;
 
     //? success response
     res.status(201).json({
@@ -88,7 +87,11 @@ export const register = async (
 };
 
 //! login
-export const login = async (req: Request, res: Response , next :NextFunction) => {
+export const login = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const { email, password } = req.body;
     if (!email) {
@@ -136,30 +139,75 @@ export const login = async (req: Request, res: Response , next :NextFunction) =>
   }
 };
 
-
 //verify otp
 
-export const verifyOtp = async (req:Request,res:Response,next:NextFunction)=>{
-
+export const verifyOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
+    // otp, email <= req.body
+    const { otp, email } = req.body;
 
-    // otp , email <= req.body
+    // Validation
+    if (!email) {
+      throw new AppError("email is required", ERROR_CODES.VALIDATION_ERR, 400);
+    }
+    if (!otp) {
+      throw new AppError("otp is required", ERROR_CODES.VALIDATION_ERR, 400);
+    }
+
     // find user by email
-    // compare otp
-    // opt => doest match => error
-    // check opt expiry
-    // if expired => error
-    // update user
-    // user.opt.hash = undefined
-    // user.otp_expiry = undefined
-    // user.is_verified = true
-    // await user.save
-    // success response
-    
-  } catch (error) {
-    next(error)
-  }
+    const user = await User.findOne({ email }).select("+otp_hash +otp_expiry");
 
-}
+    if (!user) {
+      throw new AppError("User not found", ERROR_CODES.AUTH_ERR, 404);
+    }
+
+    // Check if OTP hash exists
+    if (!user.otp_hash) {
+      throw new AppError("OTP not found", ERROR_CODES.VALIDATION_ERR, 400);
+    }
+
+    // compare otp
+    const is_otp_match = await compareHash(otp, user.otp_hash);
+
+    // otp => doesn't match => error
+    if (!is_otp_match) {
+      throw new AppError("Invalid OTP", ERROR_CODES.AUTH_ERR, 400);
+    }
+
+    // check otp expiry
+    // if expired => error
+    if (user.otp_expiry && new Date() > user.otp_expiry) {
+      throw new AppError("OTP has expired", ERROR_CODES.AUTH_ERR, 400);
+    }
+
+    // update user
+    // user.otp_hash = undefined
+    user.otp_hash = undefined;
+    // user.otp_expiry = undefined
+    user.otp_expiry = undefined;
+    // user.is_verified = true
+    user.is_verified = true;
+
+    // await user.save
+    await user.save();
+
+    // success response
+    res.status(200).json({
+      message: "OTP verified successfully",
+      code: "SUCCESS",
+      status: "success",
+      data: {
+        email: user.email,
+        is_verified: user.is_verified,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 // resend otp
