@@ -1,6 +1,6 @@
 //! routing for auth
 import express from "express";
-import { login, register } from "../controllers/auth.controller";
+import { login, register, verifyOtp } from "../controllers/auth.controller";
 import multer from "multer";
 import { uploader } from "../middlewares/multer.middleware";
 
@@ -12,4 +12,8 @@ router.post("/register", upload.single("profile_image"), register);
 
 //* Login
 router.post("/login", login);
+
+//* Verify OTP
+router.post("/verify-otp", verifyOtp);
+
 export default router;
