@@ -1,13 +1,14 @@
-import { Request, Response, NextFunction } from "express";
+import { NextFunction, Request, Response } from "express";
 import User from "../models/user.model";
 import { compareHash, hashText } from "../utils/bcrypt.utils";
-import { hash } from "bcryptjs";
 import AppError from "../middlewares/error_handler.middleware";
 import { ERROR_CODES } from "../types/enum.types";
 import { upload } from "../utils/cloudinary.utils";
-import { createOtp } from "../utils/otp.utils";
+import { createOtp, resend_otp } from "../utils/otp.utils";
 import sendEmail from "../utils/nodemailer.utils";
-import otpVerificationHtml from "../utils/email.utils";
+import otpVerificationHtml from "../utils/email.utils"
+import { signAccessToken } from "../utils/jwt.utils";
+import { ENV_CONFIG } from "../config/env.config";
 
 const dir = "/profile_images";
 
@@ -20,8 +21,7 @@ export const register = async (
   try {
     const { first_name, last_name, email, password, phone } = req.body;
     const file = req.file;
-    // console.log(file);
-    // console.log("register");
+
     if (!first_name) {
       throw new AppError(
         "first_name is required",
@@ -68,8 +68,6 @@ export const register = async (
     //! otp
 
     const otp = createOtp();
-
-    console.log(otp);
 
     const otp_hash = await hashText(otp);
     const otp_expiry = new Date(Date.now() + 10 * 60 * 1000);
@@ -126,6 +124,10 @@ export const login = async (
       );
     }
 
+    if (!user.is_verified) {
+      throw new AppError("Account is not verified.", ERROR_CODES.AUTH_ERR, 400);
+    }
+
     console.log(user);
     //? compare password
     const is_pass_match = await compareHash(password, user.password);
@@ -137,13 +139,31 @@ export const login = async (
         400,
       );
     }
-    //! success response
-    res.status(201).json({
-      message: "Login successfull!!",
-      code: "SUCCESS",
-      status: "success",
-      data: user,
+
+    // generate jwt token
+    const access_token = signAccessToken({
+      id: user._id,
+      email: user.email,
+      role: user.role,
     });
+
+    //! success response
+    res
+      .cookie("access_token", access_token, {
+        httpOnly: ENV_CONFIG.node_env === "development" ? false : true,
+        sameSite: ENV_CONFIG.node_env === "development" ? "lax" : "none",
+        secure: ENV_CONFIG.node_env === "development" ? false : true,
+        maxAge:
+          Number(ENV_CONFIG.cookie_expires_in || "7") * 24 * 60 * 60 * 1000,
+      })
+      .status(201)
+      .json({
+        message: "Login successful!!",
+        code: "SUCCESS",
+        status: "success",
+        data: user,
+        access_token,
+      });
   } catch (error: any) {
     next(error);
   }
@@ -195,7 +215,7 @@ export const verifyOtp = async (
       }
 
       // compare otp
-      const is_otp_matched = await compareHash(otp.tpString(), user.otp_hash);
+      const is_otp_matched = await compareHash(otp.toString(), user.otp_hash);
       if (!is_otp_matched) {
         throw new AppError(
           "Invalid OTP. Try resend otp",
@@ -227,4 +247,41 @@ export const verifyOtp = async (
   }
 };
 
-// resend otp
+//! resend otp
+export const resendOtp = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { email } = req.body;
+
+    //! find user
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new AppError("User not found", ERROR_CODES.NOT_FOUND_ERR, 404);
+    }
+
+    if (user.is_verified) {
+      throw new AppError(
+        "Account already verified.",
+        ERROR_CODES.AUTH_ERR,
+        400,
+      );
+    }
+
+    // resend otp
+    await resend_otp(user);
+
+    res.status(201).json({
+      message: `Otp sent to email address ${user.email}.`,
+      code: "SUCCESS",
+      status: "success",
+      data: null,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+//* get user profile
